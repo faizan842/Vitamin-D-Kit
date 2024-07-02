@@ -57,7 +57,7 @@ def extract_features_with_cnn(image_folder, labels_csv):
     return features, labels, feature_extractor
 
 # Provide the paths to your image folder and labels CSV file
-image_folder = '/Users/faizanhabib/Desktop/VitaminDkit/Model/cropped_images'
+image_folder = '/Users/faizanhabib/Desktop/VitaminDkit/Model/combined_images'
 labels_csv = '/Users/faizanhabib/Desktop/VitaminDkit/Model/new_data.csv'
 
 features, labels, feature_extractor = extract_features_with_cnn(image_folder, labels_csv)

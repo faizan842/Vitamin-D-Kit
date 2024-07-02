@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 # Input and output directories
 input_dir = '/Users/faizanhabib/Desktop/VitaminDkit/Model/cropped_images'
-output_dir = '/Users/faizanhabib/Desktop/VitaminDkit/Model/augmented_images'
+output_dir = '/Users/faizanhabib/Desktop/VitaminDkit/Model/augmented3_images'
 
 # Create the output directory if it doesn't exist
 if not os.path.exists(output_dir):
@@ -14,11 +14,11 @@ if not os.path.exists(output_dir):
 
 # Data augmentation
 datagen = ImageDataGenerator(
-    rotation_range=10
+    brightness_range=[0.6, 1.4]  # Adjust brightness
 )
 
 # Number of augmented images to generate per input image
-num_augmented_images = 9
+num_augmented_images = 4
 
 # Process each image in the input directory
 for filename in os.listdir(input_dir):
@@ -39,7 +39,7 @@ for filename in os.listdir(input_dir):
             image_aug = batch[0].astype('uint8')
             
             # Save the augmented image in .JPG format
-            save_path = os.path.join(output_dir, f'augmented_{i}_{filename}')
-            plt.imsave(save_path, image_aug, format='jpg')
+            save_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_augmented3_{i}.JPG")
+            plt.imsave(save_path, image_aug, format='jpeg')
             
             print(f"Augmented image {i + 1} saved to {save_path}")
