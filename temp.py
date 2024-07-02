@@ -2,95 +2,110 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
+import tensorflow as tf
 from tensorflow.keras import layers, models
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import MeanSquaredError
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_squared_error, r2_score
 
-# Function to resize, normalize, and apply histogram equalization to images
-def preprocess_image(image_path, target_size):
-    img = cv2.imread(image_path)
-    img = cv2.resize(img, target_size)  # Resize the image
-    
-    # Convert image to grayscale
-    if len(img.shape) == 3:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
-    # Apply histogram equalization
-    img_equalized = cv2.equalizeHist(img)
-    
-    # Normalize pixel values to be between 0 and 1
-    img_normalized = img_equalized / 255.0
-    
-    return img_normalized.flatten()  # Flatten the image as a feature vector
-
-# Function to load images and labels from a folder and CSV file
-def load_images_and_labels(image_folder, labels_csv, target_size):
+# Function to extract features from images using CNN
+def extract_features_with_cnn(image_folder, labels_csv):
     images, labels = [], []
+
     labels_df = pd.read_csv(labels_csv)
-    
+
     for filename in os.listdir(image_folder):
-        if filename.endswith(('.jpg', '.jpeg', '.png')):
+        if filename.endswith(('.JPG', '.jpeg', '.png')):
             image_path = os.path.join(image_folder, filename)
             label_row = labels_df[labels_df['Image_File'] == filename]
+
             if not label_row.empty:
                 label = float(label_row['Numeric_Label'].values[0])
-                img = preprocess_image(image_path, target_size)
+                img = cv2.imread(image_path)
+                img = cv2.resize(img, (256, 256))  # Resize the image to a consistent size
                 images.append(img)
                 labels.append(label)
-    
-    return np.array(images), np.array(labels)
 
-# Define CNN model
-def create_cnn_model(input_shape):
-    model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dense(1))
-    return model
+    images = np.array(images)
+    labels = np.array(labels)
 
-# Load images and labels
-image_folder = 'cropped kit images'
-labels_csv = 'kit-images labels.csv'
-target_size = (256, 256)
-images, labels = load_images_and_labels(image_folder, labels_csv, target_size)
+    # Define the CNN model for feature extraction
+    model = models.Sequential([
+        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(256, 256, 3)),
+        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.Flatten(),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(32, activation='relu'),
+        layers.Dense(1)  # Regression output
+    ])
 
-# Extract features from CNN model
-cnn_model = create_cnn_model(input_shape=target_size + (1,))
-cnn_features = cnn_model.predict(images.reshape(-1, 256, 256, 1))
+    model.compile(optimizer='adam', loss='mse')
 
-# Define the calibration curve equation
-def calculate_intensity(concentration):
-    intensity = 87.137 * np.exp(-0.017 * concentration)
-    return intensity
+    # Normalize image data
+    images = images / 255.0
 
-# Calculate intensity for each label (assuming labels represent concentrations)
-intensity_predictions = [calculate_intensity(label) for label in labels]
+    # Train the model
+    model.fit(images, labels, epochs=125, batch_size=32, validation_split=0.2)
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(cnn_features, intensity_predictions, test_size=0.2, random_state=42)
+    # Extract features from the last convolutional layer
+    feature_extractor = models.Model(inputs=model.inputs, outputs=model.layers[-2].output)
+    features = feature_extractor.predict(images)
 
-# Train SVR model on combined features
-svr_model = make_pipeline(StandardScaler(), SVR(C=100, epsilon=0.01, kernel='rbf'))
-svr_model.fit(X_train, y_train)
+    return features, labels, feature_extractor
 
-# Make predictions on the test set
-predictions = svr_model.predict(X_test)
+# Provide the paths to your image folder and labels CSV file
+image_folder = '/Users/faizanhabib/Desktop/VitaminDkit/Model/cropped_images'
+labels_csv = '/Users/faizanhabib/Desktop/VitaminDkit/Model/new_data.csv'
+
+features, labels, feature_extractor = extract_features_with_cnn(image_folder, labels_csv)
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+
+# Define the parameter grid for grid search
+param_grid = {'alpha': [0.1]}
+
+# Initialize Ridge regression model
+ridge = Ridge()
+
+# Perform grid search with cross-validation
+grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, cv=5, scoring='neg_mean_squared_error')
+grid_search.fit(X_train, y_train)
+
+# Get the best hyperparameters
+best_alpha = grid_search.best_params_['alpha']
+
+# Train a Ridge regression model with the best hyperparameters
+regressor = Ridge(alpha=best_alpha)
+regressor.fit(X_train, y_train)
 
 # Evaluate the model
-mse = mean_squared_error(y_test, predictions)
-r2 = r2_score(y_test, predictions)
-print(f"Mean Squared Error: {mse}")
-print(f"R^2 Score: {r2}")
+train_predictions = regressor.predict(X_train)
+test_predictions = regressor.predict(X_test)
+
+train_rmse = np.sqrt(mean_squared_error(y_train, train_predictions))
+test_rmse = np.sqrt(mean_squared_error(y_test, test_predictions))
+
+train_r2_score = r2_score(y_train, train_predictions)
+test_r2_score = r2_score(y_test, test_predictions)
+
+print("Best Alpha:", best_alpha)
+print("\nTrain RMSE:", train_rmse)
+print("Train R-squared Score:", train_r2_score)
+print("\nTest RMSE:", test_rmse)
+print("Test R-squared Score:", test_r2_score)
+
+
+
+
+# save model
+import joblib
+
+# Save the trained Ridge regression model
+joblib.dump(regressor, 'models/ridge_regression_model.pkl')
+
+# Save the feature extractor CNN model
+feature_extractor.save('models/feature_extractor_model.h5')
