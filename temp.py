@@ -22,7 +22,7 @@ def extract_features_with_cnn(image_folder, labels_csv):
             if not label_row.empty:
                 label = float(label_row['Numeric_Label'].values[0])
                 img = cv2.imread(image_path)
-                img = cv2.resize(img, (256, 256))  # Resize the image to a consistent size
+                img = cv2.resize(img, (180, 180))  # Resize the image to a consistent size
                 images.append(img)
                 labels.append(label)
 
@@ -48,7 +48,7 @@ def extract_features_with_cnn(image_folder, labels_csv):
     images = images / 255.0
 
     # Train the model
-    model.fit(images, labels, epochs=125, batch_size=32, validation_split=0.2)
+    model.fit(images, labels, epochs=1, batch_size=32, validation_split=0.2)
 
     # Extract features from the last convolutional layer
     feature_extractor = models.Model(inputs=model.inputs, outputs=model.layers[-2].output)
@@ -57,13 +57,19 @@ def extract_features_with_cnn(image_folder, labels_csv):
     return features, labels, feature_extractor
 
 # Provide the paths to your image folder and labels CSV file
-image_folder = '/Users/faizanhabib/Desktop/VitaminDkit/Model/combined_images'
-labels_csv = '/Users/faizanhabib/Desktop/VitaminDkit/Model/new_data.csv'
+image_folder = 'combined_images'
+labels_csv = 'new_data.csv'
+
+print("Extracting features using CNN...")
 
 features, labels, feature_extractor = extract_features_with_cnn(image_folder, labels_csv)
 
+print("1")
+
 # Split data into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+
+print("2")
 
 # Define the parameter grid for grid search
 param_grid = {'alpha': [0.1]}
@@ -71,16 +77,23 @@ param_grid = {'alpha': [0.1]}
 # Initialize Ridge regression model
 ridge = Ridge()
 
+print("3")
+
 # Perform grid search with cross-validation
 grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, cv=5, scoring='neg_mean_squared_error')
 grid_search.fit(X_train, y_train)
 
+print("4")
 # Get the best hyperparameters
 best_alpha = grid_search.best_params_['alpha']
+
+print("5")
 
 # Train a Ridge regression model with the best hyperparameters
 regressor = Ridge(alpha=best_alpha)
 regressor.fit(X_train, y_train)
+
+print("6")
 
 # Evaluate the model
 train_predictions = regressor.predict(X_train)
