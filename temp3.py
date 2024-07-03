@@ -108,4 +108,3 @@ joblib.dump(regressor, 'models/ridge_regression_model.pkl')
 
 # Save the feature extractor CNN model
 feature_extractor.save('models/feature_extractor_model.h5')
-
