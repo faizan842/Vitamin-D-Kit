@@ -14,11 +14,11 @@ if not os.path.exists(output_dir):
 
 # Data augmentation
 datagen = ImageDataGenerator(
-    brightness_range=[0.6, 1.4]  # Adjust brightness
+    brightness_range=[0.5, 1.4]  # Adjust brightness
 )
 
 # Number of augmented images to generate per input image
-num_augmented_images = 4
+num_augmented_images = 6
 
 # Process each image in the input directory
 for filename in os.listdir(input_dir):
@@ -35,7 +35,7 @@ for filename in os.listdir(input_dir):
         
         for i in range(num_augmented_images):
             # Generate one augmented image
-            batch = augmented_images.next()
+            batch = next(augmented_images)  # Use next() function here
             image_aug = batch[0].astype('uint8')
             
             # Save the augmented image in .JPG format
