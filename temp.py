@@ -51,7 +51,7 @@ def extract_features_with_cnn(image_folder, labels_csv):
     images = images / 255.0
 
     # Train the model
-    model.fit(images, labels, epochs=105, batch_size=16, validation_split=0.2)  # Reduce epochs and batch size
+    model.fit(images, labels, epochs=1, batch_size=16, validation_split=0.2)  # Reduce epochs and batch size
 
     # Extract features from the last convolutional layer
     feature_extractor = models.Model(inputs=model.inputs, outputs=model.layers[-2].output)
