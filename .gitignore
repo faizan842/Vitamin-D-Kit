@@ -1,13 +1,34 @@
-Cassette Images by Anuja (March 2024)/
+# Ignore all the contents of the new_data directory
 new_data/
+
+# Ignore all the contents of the Old directory
 Old/
+
+# Ignore all the contents of the Segmentation directory
 Segmentation/
+
+# Ignore the new copy.numbers file
 new copy.numbers
+
+# Ignore the vitamin-d-project.ipynb file
 vitamin-d-project.ipynb
+
+# Ignore all the contents of the augmented_images, augmented2_images, and augmented3_images directories
 augmented_images/
 augmented2_images/
 augmented3_images/
+
+# Ignore all the contents of the cropped_images directory
 cropped_images/
+
+# Ignore all the contents of the images directory
 images/
-cropped_images/
+
+# Ignore all the contents of the old_models directory
 old_models/
+
+# Ignore the pipeline.py, rename_images.py, temp2.py, and test.py files
+pipeline.py
+rename_images.py
+temp2.py
+test.py
